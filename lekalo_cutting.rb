@@ -10,7 +10,7 @@ module CodexLekaloCutting
     'lekalo_cutting/main'
   )
   EXTENSION.description = 'Построение лекал ткани по выбранным граням SketchUp. Ручная карта раскроя, ворс, резы, насечки и экспорт SVG/XML.'
-  EXTENSION.version = '1.3.1'
+  EXTENSION.version = '1.4.0'
   EXTENSION.creator = 'Малкаров Сослан'
   Sketchup.register_extension(EXTENSION, true)
 end

@@ -181,7 +181,7 @@
         <div class="title-row">
           <div>
             <h1>Лекало ткани</h1>
-            <div class="version">Сборка v1.3.1</div>
+            <div class="version">Сборка v1.4.0</div>
           </div>
           <button id="openParts" class="icon ghost" type="button" title="Список деталей">☰</button>
         </div>
@@ -409,6 +409,12 @@
           state.panels.forEach(function (panel) {
             var existing = byId[panel.id];
             if (existing && existing.manual && !forceReset) {
+              var alignedRotation = rotationForPanel(panel, existing.rotation);
+              if (angleDifference(existing.rotation, alignedRotation) > 0.01) {
+                existing.rotation = alignedRotation;
+                existing.manual = false;
+                return;
+              }
               clampPlacement(panel, existing);
               next.push(existing);
               placedItems.push({ panel: panel, placement: existing });
@@ -438,7 +444,7 @@
           var fw = Number(fabricWidth.value) || 1400;
           var margin = Number(edgeMargin.value) || 0;
           var itemGap = Number(gap.value) || 0;
-          var rotations = allowedRotations(preferredRotation);
+          var rotations = allowedRotations(panel, preferredRotation);
           var xs = [margin];
           var ys = [margin];
           placedItems.forEach(function (item) {
@@ -486,20 +492,21 @@
           return best ? best.placement : fallbackPlacement(panel, placedItems);
         }
 
-        function allowedRotations(preferredRotation) {
+        function allowedRotations(panel, preferredRotation) {
           var base = ((preferredRotation || 0) % 360 + 360) % 360;
-          if (hasNap.checked) return uniqueNumbers([base, 0, 180]);
+          if (hasNap.checked) return [rotationForPanel(panel, base)];
           return uniqueNumbers([base, 0, 90, 180, 270]);
         }
 
         function fallbackPlacement(panel, placedItems) {
           var margin = Number(edgeMargin.value) || 0;
           var itemGap = Number(gap.value) || 0;
-          var box = transformedBounds(panel.allowed, 0);
+          var rotation = rotationForPanel(panel, 0);
+          var box = transformedBounds(panel.allowed, rotation);
           var y = placedItems.reduce(function (max, item) {
             return Math.max(max, rectFromPlacement(item.panel, item.placement).maxY);
           }, margin);
-          return { id: panel.id, x: margin - box.minX, y: y + itemGap - box.minY, rotation: 0, manual: false, locked: false };
+          return { id: panel.id, x: margin - box.minX, y: y + itemGap - box.minY, rotation: rotation, manual: false, locked: false };
         }
 
         function render() {
@@ -721,6 +728,12 @@
           var placement = placementFor(state.selectedId);
           var panel = panelFor(state.selectedId);
           if (!placement || !panel) return;
+          if (hasNap.checked && panel.grain.set) {
+            placement.rotation = requiredGrainRotation(panel);
+            clampPlacement(panel, placement);
+            render();
+            return;
+          }
           var previous = { x: placement.x, y: placement.y, rotation: placement.rotation };
           placement.rotation = ((placement.rotation + deg) % 360 + 360) % 360;
           placement.manual = true;
@@ -738,7 +751,9 @@
           if (!panel) return;
           panel.grain = { set: true, x: x, y: y };
           if (window.sketchup && sketchup.set_selection_grain_axis) sketchup.set_selection_grain_axis(axis);
-          render();
+          var placement = placementFor(panel.id);
+          if (placement) placement.manual = false;
+          autoLayout(false);
         }
 
         function clampPlacement(panel, placement) {
@@ -797,8 +812,29 @@
           if (!hasNap.checked) return true;
           if (!panel.grain.set) return false;
           var radians = placement.rotation * Math.PI / 180;
+          var gx = panel.grain.x * Math.cos(radians) - panel.grain.y * Math.sin(radians);
           var gy = panel.grain.x * Math.sin(radians) + panel.grain.y * Math.cos(radians);
-          return gy >= 0.5;
+          return Math.abs(gx) <= 0.001 && gy >= 0.999;
+        }
+
+        function rotationForPanel(panel, preferredRotation) {
+          if (hasNap.checked && panel.grain.set) return requiredGrainRotation(panel);
+          return normalizeDegrees(preferredRotation || 0);
+        }
+
+        function requiredGrainRotation(panel) {
+          var grainAngle = Math.atan2(panel.grain.y, panel.grain.x) * 180 / Math.PI;
+          return normalizeDegrees(90 - grainAngle);
+        }
+
+        function normalizeDegrees(value) {
+          var normalized = value % 360;
+          return normalized < 0 ? normalized + 360 : normalized;
+        }
+
+        function angleDifference(first, second) {
+          var difference = Math.abs(normalizeDegrees(first) - normalizeDegrees(second));
+          return Math.min(difference, 360 - difference);
         }
 
         function buildLayoutPayload() {
