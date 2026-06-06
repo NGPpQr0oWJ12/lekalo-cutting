@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Список деталей лекала</title>
+    <style>
+      :root {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #20262d;
+        background: #f7f8fa;
+        --line: #d6dce2;
+        --muted: #65717d;
+        --accent: #1f78d1;
+        --danger: #c23a3a;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 14px; }
+      h1 { margin: 0 0 4px; font-size: 20px; }
+      .version { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+      .actions, .grain { display: grid; gap: 8px; margin-bottom: 12px; }
+      .grain { grid-template-columns: repeat(4, 1fr); }
+      button {
+        min-height: 34px; border: 1px solid var(--accent); border-radius: 6px;
+        background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;
+      }
+      button.secondary { background: #fff; color: var(--accent); }
+      button.danger { background: #fff; color: var(--danger); border-color: var(--danger); }
+      .list { display: grid; gap: 6px; }
+      .item {
+        padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #fff;
+      }
+      .name { font-weight: 700; margin-bottom: 4px; }
+      .meta { color: var(--muted); font-size: 12px; line-height: 1.35; }
+      .empty { color: var(--muted); padding: 12px; background: #fff; border: 1px dashed var(--line); border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Детали лекала</h1>
+    <div class="version">Сборка v1.3.1, окно не блокирует SketchUp</div>
+
+    <div class="actions">
+      <button id="refresh" class="secondary" type="button">Обновить список</button>
+      <button id="openMap" type="button">Открыть карту раскроя</button>
+      <button id="markPart" type="button">Создать деталь из выделения</button>
+      <button id="markCut" class="secondary" type="button">Добавить линию реза</button>
+      <button id="markNotch" class="secondary" type="button">Насечка по короткому ребру</button>
+      <div class="meta">Нарисуйте короткое ребро от края детали внутрь. Для совмещения шва поставьте парную насечку на второй детали.</div>
+    </div>
+
+    <div class="grain">
+      <button id="grainUp" class="secondary" type="button">Ворс ↑</button>
+      <button id="grainRight" class="secondary" type="button">→</button>
+      <button id="grainDown" class="secondary" type="button">↓</button>
+      <button id="grainLeft" class="secondary" type="button">←</button>
+    </div>
+
+    <div class="actions">
+      <button id="clearMarks" class="danger" type="button">Очистить метки выделения</button>
+    </div>
+
+    <div id="list" class="list"></div>
+
+    <script>
+      window.__LEKALO_MODEL__ = __LEKALO_MODEL_JSON__;
+      (function () {
+        var list = document.getElementById('list');
+
+        window.LekaloParts = {
+          loadModel: function (model) {
+            render(model || {});
+          }
+        };
+
+        bind('refresh', function () { call('refresh'); });
+        bind('openMap', function () { call('open_map'); });
+        bind('markPart', function () { call('mark_part'); });
+        bind('markCut', function () { call('mark_cut'); });
+        bind('markNotch', function () { call('mark_notch'); });
+        bind('clearMarks', function () { call('clear_marks'); });
+        bind('grainUp', function () { callAxis('up'); });
+        bind('grainRight', function () { callAxis('right'); });
+        bind('grainDown', function () { callAxis('down'); });
+        bind('grainLeft', function () { callAxis('left'); });
+
+        function bind(id, handler) {
+          document.getElementById(id).addEventListener('click', handler);
+        }
+
+        function call(name) {
+          if (window.sketchup && sketchup[name]) sketchup[name]();
+        }
+
+        function callAxis(axis) {
+          if (window.sketchup && sketchup.set_selection_grain_axis) sketchup.set_selection_grain_axis(axis);
+        }
+
+        function render(model) {
+          var panels = model.panels || [];
+          list.innerHTML = '';
+          if (!panels.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Деталей пока нет. Выберите грани в SketchUp и нажмите "Создать деталь из выделения".';
+            list.appendChild(empty);
+            return;
+          }
+          panels.forEach(function (panel) {
+            var item = document.createElement('div');
+            item.className = 'item';
+            item.innerHTML = '<div class="name">' + escapeHtml(panel.name) + '</div>' +
+              '<div class="meta">ID: ' + panel.id +
+              '<br>Граней: ' + panel.face_count +
+              '<br>Площадь: ' + (Math.round((panel.area_mm2 || 0) / 100) / 100) + ' см2' +
+              '<br>Точек контура: ' + ((panel.outer || []).length) +
+              '<br>Насечек: ' + ((panel.notches || []).length) +
+              '<br>Резов: ' + ((panel.cuts || []).length) +
+              '<br>Ворс: ' + (panel.grain && panel.grain.set ? 'задан' : 'не задан') +
+              '<br>Проверка: ' + ((panel.warnings || []).length ? escapeHtml((panel.warnings || [])[0]) : 'без предупреждений') + '</div>';
+            list.appendChild(item);
+          });
+        }
+
+        function escapeHtml(value) {
+          return String(value).replace(/[<>&'"]/g, function (char) {
+            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&#39;', '"': '&quot;' }[char];
+          });
+        }
+
+        window.LekaloParts.loadModel(window.__LEKALO_MODEL__);
+      })();
+    </script>
+  </body>
+</html>

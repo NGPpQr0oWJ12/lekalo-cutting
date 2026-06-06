@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Лекало для раскроя ткани</title>
+    <style>
+      :root {
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        color: #17202a;
+        background: #f4f6f8;
+        --line: #d9e0e7;
+        --muted: #667383;
+        --text: #17202a;
+        --panel: #ffffff;
+        --soft: #f8fafc;
+        --accent: #1f6fd1;
+        --accent-soft: #e9f2ff;
+        --danger: #d04444;
+        --ok: #1f7a3b;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; overflow: hidden; }
+      .app {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        background: var(--soft);
+      }
+      aside {
+        min-height: 0;
+        padding: 14px;
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+        overflow: auto;
+      }
+      main {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: 52px minmax(0, 1fr);
+      }
+      h1 { margin: 0; font-size: 19px; line-height: 1.2; letter-spacing: 0; }
+      .version { color: var(--muted); font-size: 12px; margin-top: 3px; }
+      .section { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+      .grid { display: grid; gap: 8px; }
+      .field { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
+      input {
+        width: 100%;
+        height: 34px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: #fff;
+        color: var(--text);
+      }
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12px; }
+      .check input { width: 15px; height: 15px; }
+      button {
+        min-height: 34px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: #fff;
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+      button.ghost { color: var(--accent); border-color: #aac9f0; }
+      button.danger { color: var(--danger); border-color: #efb7b7; }
+      button.icon { min-width: 34px; padding: 0; font-size: 15px; }
+      button:hover { background: #f3f7fc; }
+      button.primary:hover { background: #1a63ba; }
+      .title-row, .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .toolbar {
+        padding: 10px 14px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        box-shadow: 0 1px 0 rgba(23, 32, 42, 0.03);
+      }
+      .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .toolbar small { color: var(--muted); white-space: nowrap; }
+      .zoom-value {
+        min-width: 52px;
+        text-align: center;
+        font-weight: 700;
+        color: var(--text);
+        font-size: 13px;
+      }
+      .parts-list {
+        display: grid;
+        gap: 6px;
+        max-height: 190px;
+        overflow: auto;
+      }
+      .part-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+      }
+      .part-item.active { border-color: var(--accent); background: var(--accent-soft); }
+      .part-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: 13px; }
+      .part-meta { color: var(--muted); font-size: 11px; line-height: 1.3; }
+      .pill { color: var(--muted); font-size: 12px; white-space: nowrap; }
+      .compact-tools { display: grid; gap: 8px; }
+      .row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .stats { display: grid; gap: 6px; margin-top: 12px; }
+      .stat {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .stat strong { color: var(--text); font-size: 13px; overflow-wrap: anywhere; text-align: right; }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .map-wrap { min-width: 0; min-height: 0; padding: 10px; background: #eef2f6; }
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #eef2f6;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        touch-action: none;
+        cursor: grab;
+      }
+      svg.drag-piece { cursor: move; }
+      svg.drag-pan { cursor: grabbing; }
+      .fabric { fill: #fff; stroke: #27313c; stroke-width: 1; }
+      .work-area { fill: none; stroke: #a8b4c2; stroke-width: 0.8; stroke-dasharray: 10 6; }
+      .allowance { fill: #fff1f1; stroke: #e36b6b; stroke-width: 1; }
+      .outer { fill: #f7f9fc; stroke: #5c6875; stroke-width: 0.85; }
+      .selected .outer { stroke: #111827; stroke-width: 2; }
+      .grain-error .allowance { fill: #ffe1e1; stroke: var(--danger); }
+      .has-warning .allowance { fill: #fff6df; stroke: #d48a00; }
+      .hole { fill: #fff; stroke: #9a4d4d; stroke-width: 0.8; }
+      .cut { stroke: #b65f00; stroke-width: 1.1; stroke-dasharray: 8 5; fill: none; }
+      .notch { stroke: #111827; stroke-width: 1.1; fill: none; }
+      .label {
+        fill: #17202a;
+        font-size: 12px;
+        font-weight: 700;
+        text-anchor: middle;
+        dominant-baseline: middle;
+        paint-order: stroke;
+        stroke: rgba(255, 255, 255, 0.92);
+        stroke-width: 4px;
+        stroke-linejoin: round;
+        pointer-events: none;
+      }
+      .small-label { fill: #667383; font-size: 10px; pointer-events: none; }
+      .warning-label { fill: #a35f00; font-size: 10px; pointer-events: none; }
+      .empty { fill: #667383; font-size: 17px; }
+      .grain-arrow { stroke: var(--ok); stroke-width: 2; fill: none; marker-end: url(#arrow-green); }
+      .fabric-arrow { stroke: #111827; stroke-width: 2; fill: none; marker-end: url(#arrow-black); }
+      .ruler { stroke: #d3dbe4; stroke-width: 0.55; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside>
+        <div class="title-row">
+          <div>
+            <h1>Лекало ткани</h1>
+            <div class="version">Сборка v1.3.1</div>
+          </div>
+          <button id="openParts" class="icon ghost" type="button" title="Список деталей">☰</button>
+        </div>
+
+        <div class="section grid">
+          <div class="two">
+            <label class="field">Припуск, мм <input id="allowance" type="number" min="0" max="200" step="1" value="20"></label>
+            <label class="field">Зазор, мм <input id="gap" type="number" min="0" max="200" step="1" value="4"></label>
+          </div>
+          <label class="field">Ширина ткани, мм <input id="fabricWidth" type="number" min="100" max="5000" step="10" value="1400"></label>
+          <label class="field">Отступ от края, мм <input id="edgeMargin" type="number" min="0" max="300" step="1" value="20"></label>
+          <label class="check"><input id="hasNap" type="checkbox" checked> учитывать направление ворса</label>
+          <button id="autoLayout" class="primary" type="button">Автораскладка</button>
+          <button id="resetManual" class="ghost" type="button">Сбросить ручные позиции</button>
+        </div>
+
+        <div class="section grid">
+          <div class="title-row">
+            <strong>Детали</strong>
+            <span id="panelBadge" class="pill">0</span>
+          </div>
+          <div id="partsList" class="parts-list"></div>
+        </div>
+
+        <div class="section compact-tools">
+          <button id="markPart" class="primary" type="button">Создать деталь из выделения</button>
+          <div class="two">
+            <button id="markCut" class="ghost" type="button">Линия реза</button>
+            <button id="markNotch" class="ghost" type="button">Насечка по ребру</button>
+          </div>
+          <button id="startGrain" class="ghost" type="button">Ворс двумя точками</button>
+          <div class="row4">
+            <button id="grainUp" class="icon" type="button" title="Ворс вверх">↑</button>
+            <button id="grainRight" class="icon" type="button" title="Ворс вправо">→</button>
+            <button id="grainDown" class="icon" type="button" title="Ворс вниз">↓</button>
+            <button id="grainLeft" class="icon" type="button" title="Ворс влево">←</button>
+          </div>
+          <button id="clearMarks" class="danger" type="button">Очистить метки выделения</button>
+          <p class="hint">Насечка: нарисуйте в SketchUp короткое ребро от края детали внутрь, выделите его и нажмите «Насечка по ребру». Для совмещения шва нанесите парные насечки на обе детали.</p>
+        </div>
+
+        <div class="section compact-tools">
+          <div class="row3">
+            <button id="rotLeft" type="button">-90°</button>
+            <button id="rotRight" type="button">+90°</button>
+            <button id="rot180" type="button">180°</button>
+          </div>
+          <button id="reload" class="ghost" type="button">Обновить выделение</button>
+          <button id="createModel" class="primary" type="button">Создать в модели</button>
+          <div class="two">
+            <button id="saveSvg" class="ghost" type="button">SVG</button>
+            <button id="saveXml" class="ghost" type="button">XML</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="stats">
+            <div class="stat"><span>Полотно</span><strong id="fabricSize">-</strong></div>
+            <div class="stat"><span>Погонная длина</span><strong id="fabricLength">-</strong></div>
+            <div class="stat"><span>Выбрано</span><strong id="selectedName">-</strong></div>
+            <div class="stat"><span>Проверка</span><strong id="warningCount">-</strong></div>
+            <div class="stat"><span>КИМ</span><strong id="efficiency">-</strong></div>
+          </div>
+          <p class="hint">Колесо — масштаб. Средняя кнопка мыши — рука и перемещение карты. Детали нельзя накладывать друг на друга; при перемещении вниз полотно удлиняется автоматически.</p>
+        </div>
+      </aside>
+
+      <main>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <strong>Карта раскроя</strong>
+            <small id="modelName">-</small>
+          </div>
+          <div class="toolbar-right">
+            <button id="zoomOut" class="icon" type="button" title="Уменьшить">−</button>
+            <span id="zoomLabel" class="zoom-value">100%</span>
+            <button id="zoomIn" class="icon" type="button" title="Увеличить">+</button>
+            <button id="zoomFit" type="button">По ширине</button>
+            <button id="zoomReset" type="button">100%</button>
+          </div>
+        </div>
+        <div class="map-wrap">
+          <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      window.__LEKALO_MODEL__ = __LEKALO_MODEL_JSON__;
+      (function () {
+        var state = {
+          model: null,
+          panels: [],
+          placements: [],
+          selectedId: null,
+          drag: null,
+          zoom: 1,
+          panX: 0,
+          panY: 0,
+          fabricHeight: 520
+        };
+        var canvas = document.getElementById('canvas');
+        var allowance = document.getElementById('allowance');
+        var fabricWidth = document.getElementById('fabricWidth');
+        var edgeMargin = document.getElementById('edgeMargin');
+        var gap = document.getElementById('gap');
+        var hasNap = document.getElementById('hasNap');
+
+        window.LekaloApp = {
+          loadModel: function (model) {
+            state.model = model;
+            allowance.value = model.defaults && model.defaults.allowance_mm ? model.defaults.allowance_mm : 20;
+            fabricWidth.value = model.fabric && model.fabric.width_mm ? model.fabric.width_mm : 1400;
+            edgeMargin.value = model.fabric && model.fabric.edge_margin_mm ? model.fabric.edge_margin_mm : 20;
+            gap.value = model.defaults && model.defaults.gap_mm ? model.defaults.gap_mm : 4;
+            state.selectedId = null;
+            state.panX = 0;
+            state.panY = 0;
+            rebuildPanels();
+            autoLayout(true);
+            fitToFabric();
+          }
+        };
+
+        bind('autoLayout', function () { autoLayout(false); });
+        bind('resetManual', function () { autoLayout(true); });
+        bind('reload', function () { callSketchup('reload_selection'); });
+        bind('openParts', function () { callSketchup('open_parts_dialog'); });
+        bind('markPart', function () { callSketchup('mark_part'); });
+        bind('markCut', function () { callSketchup('mark_cut'); });
+        bind('markNotch', function () { callSketchup('mark_notch'); });
+        bind('startGrain', function () { callSketchup('start_grain'); });
+        bind('clearMarks', function () { callSketchup('clear_marks'); });
+        bind('createModel', function () {
+          if (window.sketchup && sketchup.create_model) sketchup.create_model(JSON.stringify(buildLayoutPayload()));
+        });
+        bind('saveSvg', function () {
+          if (window.sketchup && sketchup.save_svg) sketchup.save_svg(serializeSvg());
+        });
+        bind('saveXml', function () {
+          if (window.sketchup && sketchup.save_xml) sketchup.save_xml(buildXml());
+        });
+        bind('rotLeft', function () { rotateSelected(-90); });
+        bind('rotRight', function () { rotateSelected(90); });
+        bind('rot180', function () { rotateSelected(180); });
+        bind('grainUp', function () { setSelectedGrain(0, -1, 'up'); });
+        bind('grainRight', function () { setSelectedGrain(1, 0, 'right'); });
+        bind('grainDown', function () { setSelectedGrain(0, 1, 'down'); });
+        bind('grainLeft', function () { setSelectedGrain(-1, 0, 'left'); });
+        bind('zoomIn', function () { setZoom(state.zoom * 1.25); });
+        bind('zoomOut', function () { setZoom(state.zoom / 1.25); });
+        bind('zoomReset', fitToFabric);
+        bind('zoomFit', fitToFabric);
+
+        [allowance, fabricWidth, edgeMargin, gap, hasNap].forEach(function (control) {
+          control.addEventListener('change', function () { rebuildPanels(); autoLayout(false); });
+        });
+
+        canvas.addEventListener('mousedown', startPointer);
+        canvas.addEventListener('mousemove', movePointer);
+        canvas.addEventListener('mouseup', endPointer);
+        canvas.addEventListener('mouseleave', endPointer);
+        canvas.addEventListener('auxclick', function (event) {
+          if (event.button === 1) event.preventDefault();
+        });
+        canvas.addEventListener('wheel', function (event) {
+          event.preventDefault();
+          zoomAt(event, event.deltaY < 0 ? 1.12 : 0.89);
+        });
+
+        function bind(id, handler) { document.getElementById(id).addEventListener('click', handler); }
+        function callSketchup(name) { if (window.sketchup && sketchup[name]) sketchup[name](); }
+
+        function rebuildPanels() {
+          var aw = Number(allowance.value) || 0;
+          state.panels = (state.model && state.model.panels ? state.model.panels : []).map(function (panel) {
+            var normalized = {
+              id: panel.id,
+              name: panel.name,
+              area_mm2: panel.area_mm2 || 0,
+              outer: panel.outer || [],
+              holes: panel.holes || [],
+              notches: panel.notches || [],
+              cuts: panel.cuts || [],
+              grain: panel.grain || { set: false, x: 0, y: 1 },
+              warnings: panel.warnings || []
+            };
+            normalized.allowed = offsetPolygon(normalized.outer, aw);
+            normalized.box = bounds([normalized.allowed].concat(normalized.holes));
+            return normalized;
+          });
+          updatePartsList();
+        }
+
+        function updatePartsList() {
+          var list = document.getElementById('partsList');
+          list.innerHTML = '';
+          document.getElementById('panelBadge').textContent = state.panels.length + ' шт.';
+          if (!state.panels.length) {
+            var empty = document.createElement('div');
+            empty.className = 'part-meta';
+            empty.textContent = 'Выберите грани и создайте деталь.';
+            list.appendChild(empty);
+            return;
+          }
+          state.panels.forEach(function (panel) {
+            var item = document.createElement('div');
+            item.className = 'part-item' + (state.selectedId === panel.id ? ' active' : '');
+            item.innerHTML = '<div><div class="part-name">' + escapeHtml(panel.name) + '</div><div class="part-meta">' +
+              panel.outer.length + ' точек · ' + panel.notches.length + ' насечек · ' + panel.cuts.length + ' резов' +
+              (panel.warnings.length ? '<br>нужен рез/шов: ' + escapeHtml(panel.warnings[0]) : '') + '</div></div><span class="pill">' +
+              (Math.round(panel.area_mm2 / 100) / 100) + ' см²</span>';
+            item.addEventListener('click', function () { state.selectedId = panel.id; render(); });
+            list.appendChild(item);
+          });
+        }
+
+        function autoLayout(forceReset) {
+          var margin = Number(edgeMargin.value) || 0;
+          var byId = {};
+          state.placements.forEach(function (item) { byId[item.id] = item; });
+          var next = [];
+          var placedItems = [];
+
+          state.panels.forEach(function (panel) {
+            var existing = byId[panel.id];
+            if (existing && existing.manual && !forceReset) {
+              clampPlacement(panel, existing);
+              next.push(existing);
+              placedItems.push({ panel: panel, placement: existing });
+            }
+          });
+
+          var remaining = state.panels.filter(function (panel) {
+            var existing = byId[panel.id];
+            return forceReset || !existing || !existing.manual;
+          }).sort(function (a, b) { return b.area_mm2 - a.area_mm2; });
+
+          remaining.forEach(function (panel) {
+            var existing = byId[panel.id];
+            var placement = findCompactPlacement(panel, placedItems, existing ? existing.rotation : 0);
+            next.push(placement);
+            placedItems.push({ panel: panel, placement: placement });
+          });
+
+          state.placements = state.panels.map(function (panel) {
+            return next.filter(function (placement) { return placement.id === panel.id; })[0];
+          });
+          state.fabricHeight = requiredFabricHeight();
+          render();
+        }
+
+        function findCompactPlacement(panel, placedItems, preferredRotation) {
+          var fw = Number(fabricWidth.value) || 1400;
+          var margin = Number(edgeMargin.value) || 0;
+          var itemGap = Number(gap.value) || 0;
+          var rotations = allowedRotations(preferredRotation);
+          var xs = [margin];
+          var ys = [margin];
+          placedItems.forEach(function (item) {
+            var rect = rectFromPlacement(item.panel, item.placement);
+            xs.push(rect.maxX + itemGap);
+            ys.push(rect.maxY + itemGap);
+          });
+          xs = uniqueNumbers(xs).sort(function (a, b) { return a - b; });
+          ys = uniqueNumbers(ys).sort(function (a, b) { return a - b; });
+
+          var best = null;
+          rotations.forEach(function (rotation) {
+            var box = transformedBounds(panel.allowed, rotation);
+            var localPolygon = samplePolygon(panel.allowed.map(function (point) { return rotatePoint(point, rotation); }), 16);
+            var candidates = [];
+            xs.forEach(function (x) {
+              ys.forEach(function (y) {
+                candidates.push({ x: x - box.minX, y: y - box.minY });
+              });
+            });
+
+            placedItems.forEach(function (item) {
+              var otherPolygon = samplePolygon(placedPolygon(item.panel, item.placement), 16);
+              otherPolygon.forEach(function (otherPoint) {
+                localPolygon.forEach(function (localPoint) {
+                  contactDirections().forEach(function (direction) {
+                    candidates.push({
+                      x: otherPoint.x + direction.x * itemGap - localPoint.x,
+                      y: otherPoint.y + direction.y * itemGap - localPoint.y
+                    });
+                  });
+                });
+              });
+            });
+
+            uniqueCandidates(candidates).forEach(function (position) {
+              var candidate = { id: panel.id, x: position.x, y: position.y, rotation: rotation, manual: false, locked: false };
+              var rect = rectFromPlacement(panel, candidate);
+              if (rect.minX < margin - 0.01 || rect.maxX > fw - margin + 0.01 || rect.minY < margin - 0.01) return;
+              if (placementCollidesWithItems(panel, candidate, placedItems)) return;
+              var score = (rect.maxY * 1000000) + (rect.minY * 1000) + rect.minX;
+              if (!best || score < best.score) best = { placement: candidate, score: score };
+            });
+          });
+          return best ? best.placement : fallbackPlacement(panel, placedItems);
+        }
+
+        function allowedRotations(preferredRotation) {
+          var base = ((preferredRotation || 0) % 360 + 360) % 360;
+          if (hasNap.checked) return uniqueNumbers([base, 0, 180]);
+          return uniqueNumbers([base, 0, 90, 180, 270]);
+        }
+
+        function fallbackPlacement(panel, placedItems) {
+          var margin = Number(edgeMargin.value) || 0;
+          var itemGap = Number(gap.value) || 0;
+          var box = transformedBounds(panel.allowed, 0);
+          var y = placedItems.reduce(function (max, item) {
+            return Math.max(max, rectFromPlacement(item.panel, item.placement).maxY);
+          }, margin);
+          return { id: panel.id, x: margin - box.minX, y: y + itemGap - box.minY, rotation: 0, manual: false, locked: false };
+        }
+
+        function render() {
+          var fw = Number(fabricWidth.value) || 1400;
+          var margin = Number(edgeMargin.value) || 0;
+          if (!state.panels.length) {
+            state.fabricHeight = 520;
+            setViewBox(fw, state.fabricHeight);
+            canvas.innerHTML = '';
+            canvas.appendChild(svgEl('text', { class: 'empty', x: 40, y: 70 }, 'Нет выбранных граней. Выберите Face, группу или компонент и обновите выделение.'));
+            updateStats(0, 0);
+            return;
+          }
+          state.fabricHeight = requiredFabricHeight();
+          setViewBox(fw, state.fabricHeight);
+          canvas.innerHTML = '';
+          addDefs();
+          canvas.appendChild(svgEl('rect', { class: 'fabric', x: 0, y: 0, width: fw, height: state.fabricHeight }));
+          canvas.appendChild(svgEl('rect', { class: 'work-area', x: margin, y: margin, width: Math.max(0, fw - margin * 2), height: Math.max(0, state.fabricHeight - margin * 2) }));
+          drawRulers(fw, state.fabricHeight, margin);
+          drawFabricGrain(fw, margin);
+          state.panels.forEach(drawPanel);
+          updatePartsList();
+          updateStats(state.panels.length, state.fabricHeight);
+        }
+
+        function setViewBox(width, height) {
+          var rect = canvas.getBoundingClientRect();
+          var viewportRatio = rect.width / Math.max(rect.height, 1);
+          var padding = Math.max(24, Number(edgeMargin.value) || 0);
+          var fitWidth = width + padding * 2;
+          var fitHeight = fitWidth / viewportRatio;
+
+          var vw = fitWidth / state.zoom;
+          var vh = fitHeight / state.zoom;
+          state.panX = clamp(state.panX, -1000000, 1000000);
+          state.panY = clamp(state.panY, -padding, 1000000);
+          canvas.setAttribute('viewBox', state.panX + ' ' + state.panY + ' ' + vw + ' ' + vh);
+          document.getElementById('zoomLabel').textContent = Math.round(state.zoom * 100) + '%';
+        }
+
+        function setZoom(value) {
+          state.zoom = clamp(value, 0.18, 7);
+          render();
+        }
+
+        function zoomAt(event, factor) {
+          var before = svgPoint(event);
+          state.zoom = clamp(state.zoom * factor, 0.18, 7);
+          var fw = Number(fabricWidth.value) || 1400;
+          var oldPanX = state.panX;
+          var oldPanY = state.panY;
+          setViewBox(fw, state.fabricHeight);
+          var after = svgPoint(event);
+          state.panX = oldPanX + before.x - after.x;
+          state.panY = oldPanY + before.y - after.y;
+          render();
+        }
+
+        function fitToFabric() {
+          state.zoom = 1;
+          centerFabric();
+          render();
+        }
+
+        function centerFabric() {
+          var padding = Math.max(24, Number(edgeMargin.value) || 0);
+          state.panX = -padding;
+          state.panY = -padding;
+        }
+
+        function drawPanel(panel) {
+          var placement = placementFor(panel.id);
+          if (!placement) return;
+          var valid = grainIsValid(panel, placement);
+          placement.grain_valid = valid;
+          placement.grain_set = !!panel.grain.set;
+          var group = svgEl('g', {
+            class: 'piece' + (state.selectedId === panel.id ? ' selected' : '') + (!valid ? ' grain-error' : '') + (panel.warnings.length ? ' has-warning' : ''),
+            'data-id': panel.id,
+            transform: 'translate(' + placement.x + ' ' + placement.y + ') rotate(' + placement.rotation + ')'
+          });
+          group.appendChild(svgEl('polygon', { class: 'allowance', points: points(panel.allowed) }));
+          group.appendChild(svgEl('polygon', { class: 'outer', points: points(panel.outer) }));
+          panel.holes.forEach(function (hole) { group.appendChild(svgEl('polygon', { class: 'hole', points: points(hole) })); });
+          panel.cuts.forEach(function (cut) { group.appendChild(svgEl('polyline', { class: 'cut', points: points(cut) })); });
+          panel.notches.forEach(function (notch) { drawNotch(group, notch); });
+          drawPanelGrain(group, panel);
+          var labelPoint = centerOf(panel.outer);
+          group.appendChild(svgEl('text', { class: 'label', x: labelPoint.x, y: labelPoint.y - 22 }, panel.name));
+          if (!panel.grain.set && hasNap.checked) group.appendChild(svgEl('text', { class: 'small-label', x: labelPoint.x - 34, y: labelPoint.y + 30 }, 'ворс не задан'));
+          if (panel.warnings.length) group.appendChild(svgEl('text', { class: 'warning-label', x: labelPoint.x - 34, y: labelPoint.y + 44 }, 'нужен рез/шов'));
+          canvas.appendChild(group);
+        }
+
+        function drawNotch(group, notch) {
+          if (Array.isArray(notch) && notch.length >= 2) {
+            group.appendChild(svgEl('polyline', { class: 'notch', points: points(notch) }));
+            return;
+          }
+          var size = 6;
+          group.appendChild(svgEl('polyline', {
+            class: 'notch',
+            points: notch.x + ',' + notch.y + ' ' + notch.x + ',' + (notch.y + size)
+          }));
+        }
+
+        function drawPanelGrain(group, panel) {
+          var center = centerOf(panel.outer);
+          var grain = panel.grain.set ? panel.grain : { x: 0, y: 1 };
+          var len = Math.max(45, Math.min(100, Math.sqrt(Math.max(panel.area_mm2, 1)) / 3));
+          group.appendChild(svgEl('line', {
+            class: 'grain-arrow',
+            x1: center.x - grain.x * len / 2,
+            y1: center.y - grain.y * len / 2,
+            x2: center.x + grain.x * len / 2,
+            y2: center.y + grain.y * len / 2
+          }));
+        }
+
+        function drawFabricGrain(width, margin) {
+          var x = width - Math.max(80, margin + 50);
+          var y1 = Math.max(30, margin);
+          var y2 = y1 + 100;
+          canvas.appendChild(svgEl('line', { class: 'fabric-arrow', x1: x, y1: y1, x2: x, y2: y2 }));
+          canvas.appendChild(svgEl('text', { class: 'small-label', x: x - 44, y: y2 + 16 }, 'ворс полотна'));
+        }
+
+        function drawRulers(width, height, margin) {
+          for (var x = 0; x <= width; x += 100) canvas.appendChild(svgEl('line', { class: 'ruler', x1: x, y1: 0, x2: x, y2: 8 }));
+          for (var y = 0; y <= height; y += 100) canvas.appendChild(svgEl('line', { class: 'ruler', x1: 0, y1: y, x2: 8, y2: y }));
+          canvas.appendChild(svgEl('text', { class: 'small-label', x: margin + 4, y: Math.max(12, margin - 6) }, 'отступ ' + margin + ' мм'));
+        }
+
+        function addDefs() {
+          var defs = svgEl('defs', {});
+          defs.innerHTML = '<marker id="arrow-green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f7a3b"/></marker><marker id="arrow-black" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#111827"/></marker>';
+          canvas.appendChild(defs);
+        }
+
+        function startPointer(event) {
+          var piece = event.target.closest ? event.target.closest('.piece') : null;
+          if (event.button === 1) {
+            event.preventDefault();
+            state.drag = { mode: 'pan', startClientX: event.clientX, startClientY: event.clientY, basePanX: state.panX, basePanY: state.panY };
+            canvas.classList.add('drag-pan');
+            return;
+          }
+          if (event.button !== 0) return;
+          if (piece) {
+            var id = Number(piece.getAttribute('data-id'));
+            var placement = placementFor(id);
+            if (!placement || placement.locked) return;
+            state.selectedId = id;
+            state.drag = {
+              mode: 'piece',
+              id: id,
+              startClientX: event.clientX,
+              startClientY: event.clientY,
+              baseX: placement.x,
+              baseY: placement.y,
+              lastX: placement.x,
+              lastY: placement.y,
+              unitsX: canvas.viewBox.baseVal.width / Math.max(canvas.getBoundingClientRect().width, 1),
+              unitsY: canvas.viewBox.baseVal.height / Math.max(canvas.getBoundingClientRect().height, 1)
+            };
+            canvas.classList.add('drag-piece');
+            render();
+            return;
+          }
+          state.drag = { mode: 'pan', startClientX: event.clientX, startClientY: event.clientY, basePanX: state.panX, basePanY: state.panY };
+          canvas.classList.add('drag-pan');
+        }
+
+        function movePointer(event) {
+          if (!state.drag) return;
+          if (state.drag.mode === 'pan') {
+            var fw = Number(fabricWidth.value) || 1400;
+            var view = canvas.viewBox.baseVal;
+            var rect = canvas.getBoundingClientRect();
+            state.panX = state.drag.basePanX - (event.clientX - state.drag.startClientX) * view.width / Math.max(rect.width, 1);
+            state.panY = state.drag.basePanY - (event.clientY - state.drag.startClientY) * view.height / Math.max(rect.height, 1);
+            setViewBox(fw, state.fabricHeight);
+            return;
+          }
+          var placement = placementFor(state.drag.id);
+          var panel = panelFor(state.drag.id);
+          var candidate = {
+            id: placement.id,
+            x: state.drag.baseX + (event.clientX - state.drag.startClientX) * state.drag.unitsX,
+            y: state.drag.baseY + (event.clientY - state.drag.startClientY) * state.drag.unitsY,
+            rotation: placement.rotation
+          };
+          clampPlacement(panel, candidate);
+          if (!placementCollides(panel, candidate)) {
+            placement.x = candidate.x;
+            placement.y = candidate.y;
+            placement.manual = true;
+            state.drag.lastX = candidate.x;
+            state.drag.lastY = candidate.y;
+          } else {
+            var nearest = nearestValidPlacement(panel, state.drag.lastX, state.drag.lastY, candidate);
+            placement.x = nearest.x;
+            placement.y = nearest.y;
+            placement.manual = true;
+            state.drag.lastX = nearest.x;
+            state.drag.lastY = nearest.y;
+          }
+          render();
+        }
+
+        function endPointer() {
+          state.drag = null;
+          canvas.classList.remove('drag-piece');
+          canvas.classList.remove('drag-pan');
+        }
+
+        function rotateSelected(deg) {
+          var placement = placementFor(state.selectedId);
+          var panel = panelFor(state.selectedId);
+          if (!placement || !panel) return;
+          var previous = { x: placement.x, y: placement.y, rotation: placement.rotation };
+          placement.rotation = ((placement.rotation + deg) % 360 + 360) % 360;
+          placement.manual = true;
+          clampPlacement(panel, placement);
+          if (placementCollides(panel, placement)) {
+            placement.x = previous.x;
+            placement.y = previous.y;
+            placement.rotation = previous.rotation;
+          }
+          render();
+        }
+
+        function setSelectedGrain(x, y, axis) {
+          var panel = panelFor(state.selectedId);
+          if (!panel) return;
+          panel.grain = { set: true, x: x, y: y };
+          if (window.sketchup && sketchup.set_selection_grain_axis) sketchup.set_selection_grain_axis(axis);
+          render();
+        }
+
+        function clampPlacement(panel, placement) {
+          var fw = Number(fabricWidth.value) || 1400;
+          var margin = Number(edgeMargin.value) || 0;
+          var box = transformedBounds(panel.allowed, placement.rotation);
+          placement.x = clamp(placement.x, margin - box.minX, fw - margin - box.maxX);
+          placement.y = Math.max(placement.y, margin - box.minY);
+        }
+
+        function placementCollides(panel, placement) {
+          var items = [];
+          state.panels.forEach(function (otherPanel) {
+            if (otherPanel.id === panel.id) return false;
+            var otherPlacement = placementFor(otherPanel.id);
+            if (otherPlacement) items.push({ panel: otherPanel, placement: otherPlacement });
+          });
+          return placementCollidesWithItems(panel, placement, items);
+        }
+
+        function placementCollidesWithItems(panel, placement, items) {
+          var itemGap = Math.max(0, Number(gap.value) || 0);
+          var candidateRect = rectFromPlacement(panel, placement);
+          var candidatePolygon = placedPolygon(panel, placement);
+          return items.some(function (item) {
+            var otherRect = rectFromPlacement(item.panel, item.placement);
+            if (!rectanglesOverlap(candidateRect, otherRect, itemGap)) return false;
+            return polygonsOverlapOrTooClose(candidatePolygon, placedPolygon(item.panel, item.placement), itemGap);
+          });
+        }
+
+        function nearestValidPlacement(panel, validX, validY, blocked) {
+          var low = 0;
+          var high = 1;
+          var best = { x: validX, y: validY };
+          for (var index = 0; index < 16; index += 1) {
+            var ratio = (low + high) / 2;
+            var candidate = {
+              id: blocked.id,
+              x: validX + (blocked.x - validX) * ratio,
+              y: validY + (blocked.y - validY) * ratio,
+              rotation: blocked.rotation
+            };
+            clampPlacement(panel, candidate);
+            if (placementCollides(panel, candidate)) {
+              high = ratio;
+            } else {
+              low = ratio;
+              best = candidate;
+            }
+          }
+          return best;
+        }
+
+        function grainIsValid(panel, placement) {
+          if (!hasNap.checked) return true;
+          if (!panel.grain.set) return false;
+          var radians = placement.rotation * Math.PI / 180;
+          var gy = panel.grain.x * Math.sin(radians) + panel.grain.y * Math.cos(radians);
+          return gy >= 0.5;
+        }
+
+        function buildLayoutPayload() {
+          return {
+            settings: {
+              allowance_mm: Number(allowance.value) || 0,
+              fabric_width_mm: Number(fabricWidth.value) || 1400,
+              fabric_height_mm: state.fabricHeight,
+              edge_margin_mm: Number(edgeMargin.value) || 0,
+              gap_mm: Number(gap.value) || 0,
+              has_nap: !!hasNap.checked,
+              nap_direction: { x: 0, y: 1 },
+              material_efficiency: materialEfficiency()
+            },
+            placements: state.panels.map(function (panel) {
+              var p = placementFor(panel.id);
+              return {
+                id: panel.id,
+                name: panel.name,
+                x: p ? p.x : 0,
+                y: p ? p.y : 0,
+                rotation: p ? p.rotation : 0,
+                manual: p ? !!p.manual : false,
+                locked: p ? !!p.locked : false,
+                grain_set: !!panel.grain.set,
+                grain_valid: p ? grainIsValid(panel, p) : false,
+                area_mm2: panel.area_mm2,
+                notches_count: panel.notches.length,
+                cuts_count: panel.cuts.length
+              };
+            })
+          };
+        }
+
+        function buildXml() {
+          var layout = buildLayoutPayload();
+          var lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<lekalo unit="mm">'];
+          lines.push('  <fabric width="' + layout.settings.fabric_width_mm + '" height="' + layout.settings.fabric_height_mm + '" edge_margin="' + layout.settings.edge_margin_mm + '" has_nap="' + layout.settings.has_nap + '" efficiency="' + layout.settings.material_efficiency + '" />');
+          layout.placements.forEach(function (placement) {
+            var panel = panelFor(placement.id);
+            lines.push('  <panel id="' + panel.id + '" name="' + escapeXml(panel.name) + '" x="' + placement.x.toFixed(3) + '" y="' + placement.y.toFixed(3) + '" rotation="' + placement.rotation + '" grain_valid="' + placement.grain_valid + '">');
+            panel.outer.forEach(function (point) { lines.push('    <point x="' + point.x + '" y="' + point.y + '" />'); });
+            panel.notches.forEach(function (notch) {
+              if (Array.isArray(notch) && notch.length >= 2) {
+                lines.push('    <notch x1="' + notch[0].x + '" y1="' + notch[0].y + '" x2="' + notch[1].x + '" y2="' + notch[1].y + '" />');
+              } else {
+                lines.push('    <notch x="' + notch.x + '" y="' + notch.y + '" />');
+              }
+            });
+            lines.push('  </panel>');
+          });
+          lines.push('</lekalo>');
+          return lines.join('\n') + '\n';
+        }
+
+        function serializeSvg() {
+          return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(canvas) + '\n';
+        }
+
+        function updateStats(panelCount, height) {
+          document.getElementById('modelName').textContent = state.model && state.model.model_name ? state.model.model_name : 'Без названия';
+          document.getElementById('fabricSize').textContent = (Number(fabricWidth.value) || 1400) + ' x ' + Math.ceil(height) + ' мм';
+          document.getElementById('fabricLength').textContent = (Math.ceil(height) / 1000).toFixed(2) + ' м';
+          var selected = panelFor(state.selectedId);
+          document.getElementById('selectedName').textContent = selected ? selected.name : '-';
+          document.getElementById('warningCount').textContent = warningCount() ? warningCount() + ' зон' : 'нет';
+          document.getElementById('efficiency').textContent = materialEfficiency() + '%';
+        }
+
+        function warningCount() {
+          return state.panels.reduce(function (sum, panel) { return sum + (panel.warnings && panel.warnings.length ? 1 : 0); }, 0);
+        }
+
+        function materialEfficiency() {
+          var fabricArea = (Number(fabricWidth.value) || 1400) * Math.max(state.fabricHeight, 1);
+          var panelsArea = state.panels.reduce(function (sum, panel) { return sum + (panel.area_mm2 || 0); }, 0);
+          return Math.round((panelsArea / fabricArea) * 1000) / 10;
+        }
+
+        function placementFor(id) { return state.placements.filter(function (item) { return item && item.id === id; })[0]; }
+        function panelFor(id) { return state.panels.filter(function (item) { return item.id === id; })[0]; }
+        function layoutHeight() {
+          return state.panels.reduce(function (max, panel) {
+            var placement = placementFor(panel.id);
+            if (!placement) return max;
+            var rect = rectFromPlacement(panel, placement);
+            return Math.max(max, rect.maxY);
+          }, 0);
+        }
+        function requiredFabricHeight() {
+          var margin = Number(edgeMargin.value) || 0;
+          return Math.max(margin * 2, Math.ceil(layoutHeight() + margin));
+        }
+        function rectFromPlacement(panel, placement) {
+          var box = transformedBounds(panel.allowed, placement.rotation);
+          return { minX: placement.x + box.minX, minY: placement.y + box.minY, maxX: placement.x + box.maxX, maxY: placement.y + box.maxY };
+        }
+        function rectanglesOverlap(a, b, spacing) {
+          return !(a.maxX + spacing <= b.minX || a.minX >= b.maxX + spacing || a.maxY + spacing <= b.minY || a.minY >= b.maxY + spacing);
+        }
+        function placedPolygon(panel, placement) {
+          return panel.allowed.map(function (point) {
+            var rotated = rotatePoint(point, placement.rotation);
+            return { x: rotated.x + placement.x, y: rotated.y + placement.y };
+          });
+        }
+        function polygonsOverlapOrTooClose(first, second, spacing) {
+          if (polygonsIntersect(first, second)) return true;
+          return polygonDistance(first, second) < spacing - 0.01;
+        }
+        function polygonsIntersect(first, second) {
+          for (var i = 0; i < first.length; i += 1) {
+            var a1 = first[i];
+            var a2 = first[(i + 1) % first.length];
+            for (var j = 0; j < second.length; j += 1) {
+              var b1 = second[j];
+              var b2 = second[(j + 1) % second.length];
+              if (segmentsIntersect(a1, a2, b1, b2)) return true;
+            }
+          }
+          return pointInPolygon(first[0], second) || pointInPolygon(second[0], first);
+        }
+        function polygonDistance(first, second) {
+          var result = Infinity;
+          for (var i = 0; i < first.length; i += 1) {
+            var a1 = first[i];
+            var a2 = first[(i + 1) % first.length];
+            for (var j = 0; j < second.length; j += 1) {
+              var b1 = second[j];
+              var b2 = second[(j + 1) % second.length];
+              result = Math.min(result, segmentDistance(a1, a2, b1, b2));
+            }
+          }
+          return result;
+        }
+        function segmentsIntersect(a, b, c, d) {
+          var abC = cross(a, b, c);
+          var abD = cross(a, b, d);
+          var cdA = cross(c, d, a);
+          var cdB = cross(c, d, b);
+          if (((abC > 0 && abD < 0) || (abC < 0 && abD > 0)) &&
+              ((cdA > 0 && cdB < 0) || (cdA < 0 && cdB > 0))) return true;
+          return Math.abs(abC) < 0.001 && pointOnSegment(c, a, b) ||
+            Math.abs(abD) < 0.001 && pointOnSegment(d, a, b) ||
+            Math.abs(cdA) < 0.001 && pointOnSegment(a, c, d) ||
+            Math.abs(cdB) < 0.001 && pointOnSegment(b, c, d);
+        }
+        function segmentDistance(a, b, c, d) {
+          if (segmentsIntersect(a, b, c, d)) return 0;
+          return Math.min(
+            pointSegmentDistance(a, c, d),
+            pointSegmentDistance(b, c, d),
+            pointSegmentDistance(c, a, b),
+            pointSegmentDistance(d, a, b)
+          );
+        }
+        function pointSegmentDistance(point, start, finish) {
+          var dx = finish.x - start.x;
+          var dy = finish.y - start.y;
+          var lengthSquared = dx * dx + dy * dy;
+          if (lengthSquared <= 0.000001) return Math.hypot(point.x - start.x, point.y - start.y);
+          var t = clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared, 0, 1);
+          return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
+        }
+        function pointInPolygon(point, polygon) {
+          var inside = false;
+          for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            var a = polygon[i];
+            var b = polygon[j];
+            if (((a.y > point.y) !== (b.y > point.y)) &&
+                point.x < (b.x - a.x) * (point.y - a.y) / ((b.y - a.y) || 0.000001) + a.x) inside = !inside;
+          }
+          return inside;
+        }
+        function pointOnSegment(point, start, finish) {
+          return point.x >= Math.min(start.x, finish.x) - 0.001 &&
+            point.x <= Math.max(start.x, finish.x) + 0.001 &&
+            point.y >= Math.min(start.y, finish.y) - 0.001 &&
+            point.y <= Math.max(start.y, finish.y) + 0.001;
+        }
+        function cross(a, b, c) {
+          return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        }
+        function transformedBounds(points, rotation) {
+          return bounds([points.map(function (point) { return rotatePoint(point, rotation); })]);
+        }
+        function rotatePoint(point, rotation) {
+          var r = rotation * Math.PI / 180;
+          return { x: point.x * Math.cos(r) - point.y * Math.sin(r), y: point.x * Math.sin(r) + point.y * Math.cos(r) };
+        }
+        function svgPoint(event) {
+          var pt = canvas.createSVGPoint();
+          pt.x = event.clientX;
+          pt.y = event.clientY;
+          return pt.matrixTransform(canvas.getScreenCTM().inverse());
+        }
+        function offsetPolygon(points, distance) {
+          if (points.length < 3 || distance <= 0) return points.slice();
+          var orientation = signedArea(points) >= 0 ? 1 : -1;
+          var result = [];
+          for (var i = 0; i < points.length; i += 1) {
+            var previous = points[(i + points.length - 1) % points.length];
+            var current = points[i];
+            var next = points[(i + 1) % points.length];
+            var previousLine = offsetLine(previous, current, distance, orientation);
+            var nextLine = offsetLine(current, next, distance, orientation);
+            var intersection = lineIntersection(previousLine.a, previousLine.b, nextLine.a, nextLine.b);
+            if (!intersection || Math.hypot(intersection.x - current.x, intersection.y - current.y) > distance * 8) {
+              result.push(previousLine.b);
+              result.push(nextLine.a);
+            } else {
+              result.push(intersection);
+            }
+          }
+          return result;
+        }
+        function offsetLine(start, finish, distance, orientation) {
+          var dx = finish.x - start.x;
+          var dy = finish.y - start.y;
+          var length = Math.hypot(dx, dy) || 1;
+          var nx = orientation > 0 ? dy / length : -dy / length;
+          var ny = orientation > 0 ? -dx / length : dx / length;
+          return {
+            a: { x: start.x + nx * distance, y: start.y + ny * distance },
+            b: { x: finish.x + nx * distance, y: finish.y + ny * distance }
+          };
+        }
+        function lineIntersection(a, b, c, d) {
+          var denominator = (a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x);
+          if (Math.abs(denominator) < 0.000001) return null;
+          var first = a.x * b.y - a.y * b.x;
+          var second = c.x * d.y - c.y * d.x;
+          return {
+            x: (first * (c.x - d.x) - (a.x - b.x) * second) / denominator,
+            y: (first * (c.y - d.y) - (a.y - b.y) * second) / denominator
+          };
+        }
+        function signedArea(points) {
+          var result = 0;
+          points.forEach(function (point, index) {
+            var next = points[(index + 1) % points.length];
+            result += point.x * next.y - next.x * point.y;
+          });
+          return result / 2;
+        }
+        function centerOf(points) {
+          var sum = points.reduce(function (acc, point) { return { x: acc.x + point.x, y: acc.y + point.y }; }, { x: 0, y: 0 });
+          return { x: sum.x / Math.max(1, points.length), y: sum.y / Math.max(1, points.length) };
+        }
+        function bounds(loops) {
+          var box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+          loops.forEach(function (loop) {
+            loop.forEach(function (point) {
+              box.minX = Math.min(box.minX, point.x);
+              box.minY = Math.min(box.minY, point.y);
+              box.maxX = Math.max(box.maxX, point.x);
+              box.maxY = Math.max(box.maxY, point.y);
+            });
+          });
+          return isFinite(box.minX) ? box : { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+        }
+        function points(loop) { return loop.map(function (point) { return point.x.toFixed(2) + ',' + point.y.toFixed(2); }).join(' '); }
+        function uniqueNumbers(values) {
+          var seen = {};
+          return values.filter(function (value) {
+            var key = Math.round(value * 1000);
+            if (seen[key]) return false;
+            seen[key] = true;
+            return true;
+          });
+        }
+        function contactDirections() {
+          var diagonal = Math.SQRT1_2;
+          return [
+            { x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 },
+            { x: -diagonal, y: -diagonal }, { x: diagonal, y: -diagonal },
+            { x: -diagonal, y: diagonal }, { x: diagonal, y: diagonal }
+          ];
+        }
+        function uniqueCandidates(candidates) {
+          var seen = {};
+          return candidates.filter(function (candidate) {
+            var key = Math.round(candidate.x * 100) + ':' + Math.round(candidate.y * 100);
+            if (seen[key]) return false;
+            seen[key] = true;
+            return true;
+          });
+        }
+        function samplePolygon(polygon, limit) {
+          if (polygon.length <= limit) return polygon;
+          var sampled = [];
+          for (var index = 0; index < limit; index += 1) {
+            sampled.push(polygon[Math.floor(index * polygon.length / limit)]);
+          }
+          return sampled;
+        }
+        function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
+        function svgEl(name, attrs, text) {
+          var node = document.createElementNS('http://www.w3.org/2000/svg', name);
+          Object.keys(attrs).forEach(function (key) { node.setAttribute(key, attrs[key]); });
+          if (text) node.textContent = text;
+          return node;
+        }
+        function escapeHtml(value) {
+          return String(value).replace(/[<>&'"]/g, function (char) {
+            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&#39;', '"': '&quot;' }[char];
+          });
+        }
+        function escapeXml(value) {
+          return String(value).replace(/[<>&'"]/g, function (char) {
+            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[char];
+          });
+        }
+
+        window.LekaloApp.loadModel(window.__LEKALO_MODEL__);
+      })();
+    </script>
+  </body>
+</html>

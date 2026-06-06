@@ -1,0 +1,12 @@
+*
+!.gitignore
+!README.md
+!lekalo_cutting.rb
+!lekalo_cutting/
+!lekalo_cutting/**
+!scripts/
+!scripts/**
+!installer/
+!installer/**
+!.github/
+!.github/**
